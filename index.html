@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GTT Online Dashboard</title>
+  <style>
+    body {
+      background-color: #0a2a5c;
+      color: white;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    #logo {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    #logo img {
+      max-height: 100px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .box {
+      background-color: #1b3e72;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      font-size: 18px;
+      transition: transform 0.2s;
+    }
+    .box:hover {
+      transform: scale(1.05);
+      cursor: pointer;
+    }
+    a {
+      color: white;
+      text-decoration: none;
+    }
+    .time {
+      font-weight: bold;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="time" id="current-date"></div>
+    <div class="time" id="current-time"></div>
+  </header>
+
+  <div id="logo">
+    <img src="https://tylermngr.github.io/GTT/logo.png" alt="GTT Logo" />
+  </div>
+
+  <div class="grid">
+    <!-- Link Boxes -->
+    <div class="box"><a href="https://vehicleenquiry.service.gov.uk/" target="_blank">VRM Lookup</a></div>
+    <div class="box"><a href="https://tylermngr.github.io/GTT/" target="_blank">Load Job Card</a></div>
+    <div class="box"><a href="#">Send Message</a></div>
+
+    <!-- Live Data Boxes -->
+    <div class="box" id="workshop-loading">Loading...</div>
+    <div class="box" id="completed-jobs">Loading...</div>
+    <div class="box" id="efficiency">Loading...</div>
+  </div>
+
+  <script>
+    // Time and Date
+    function updateTime() {
+      const now = new Date();
+      const date = now.toLocaleDateString();
+      const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('current-date').textContent = date;
+      document.getElementById('current-time').textContent = time;
+    }
+    updateTime();
+    setInterval(updateTime, 60000); // Update every minute
+
+    // Fetch Google Sheet CSV
+    const sheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQZ-zJYsX9U5UDA9VPdW8RD_CUer3JTSbfBNVcix2x5u6myQogxI_fCH6OIRU6nffi47ASKYSRPftKT/pub?output=csv';
+
+    fetch(sheetURL)
+      .then(response => response.text())
+      .then(csv => {
+        const rows = csv.trim().split('\n').map(row => row.split(','));
+        const workshop = rows.slice(1, 5).map(r => r[0]).join('<br>');
+        const completed = rows.slice(1, 5).map(r => r[1]).join('<br>');
+        const efficiency = rows[1][2] || 'N/A';
+
+        document.getElementById('workshop-loading').innerHTML = `<strong>Todays Workshop Loading</strong><br>${workshop}`;
+        document.getElementById('completed-jobs').innerHTML = `<strong>Completed Jobs</strong><br>${completed}`;
+        document.getElementById('efficiency').innerHTML = `<strong>Workshop Efficiency</strong><br>${efficiency}`;
+      })
+      .catch(err => {
+        console.error('Failed to load data:', err);
+      });
+  </script>
+</body>
+</html>
