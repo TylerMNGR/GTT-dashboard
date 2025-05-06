@@ -55,6 +55,8 @@
     .purple { background-color: #a259ff; color: white; }
     .lightblue { background-color: #5bc0de; }
     .yellow { background-color: #f0db4f; }
+    .green { background-color: #28a745; color: white; }
+    .whitebox { background-color: #ffffff; color: #000000; }
     .footer-box {
       background-color: #1b3e72;
       padding: 20px;
@@ -82,9 +84,9 @@
     <div class="box yellow"><a href="#">Send Message</a></div>
 
     <!-- Live Data Boxes -->
-    <div class="box" id="workshop-loading">Loading...</div>
-    <div class="box" id="completed-jobs">Loading...</div>
-    <div class="box" id="efficiency">Loading...</div>
+    <div class="box yellow" id="workshop-loading">Loading...</div>
+    <div class="box green" id="completed-jobs">Loading...</div>
+    <div class="box whitebox" id="efficiency">Loading...</div>
   </div>
 
   <!-- Messages to Workshop Box -->
@@ -123,8 +125,6 @@
 
     updateTime();
     fetchData();
-
-    // Refresh every 30 seconds
     setInterval(() => {
       updateTime();
       fetchData();
