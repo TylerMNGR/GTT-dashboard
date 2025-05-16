@@ -66,6 +66,19 @@
       color: white;
       margin-bottom: 30px;
     }
+    @keyframes flash {
+      0% { background-color: #ff0000; }
+      50% { background-color: #ffff00; color: black; }
+      100% { background-color: #ff0000; }
+    }
+    .flash {
+      animation: flash 1s ease-in-out;
+    }
+    .vorbox {
+      background-color: #ff0000 !important;
+      color: #ffff00 !important;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -81,12 +94,25 @@
   <div class="grid">
     <div class="box purple"><a href="https://vehicleenquiry.service.gov.uk/" target="_blank">VRM Lookup</a></div>
     <div class="box lightblue"><a href="https://tylermngr.github.io/GTT/" target="_blank">Load Job Card</a></div>
-    <div class="box yellow" id="workshop-loading">Loading today's events...</div>
-    <div class="box green" id="completed-jobs">Placeholder</div>
-    <div class="box whitebox" id="efficiency">Placeholder</div>
+    <div class="box vorbox" id="vor-box">Current VOR Vehicles</div>
+    <div class="box yellow" id="workshop-loading">Loading...</div>
+    <div class="box green" id="completed-jobs">Loading...</div>
+    <div class="box whitebox" id="efficiency">Loading...</div>
   </div>
 
-  <div class="footer-box" id="workshop-message">Message area</div>
+  <!-- Workshop Message -->
+  <div class="footer-box" id="workshop-message">Loading message...</div>
+
+  <!-- Google Calendar Embed -->
+  <div style="margin-top: 10px; text-align: center;">
+    <h2 style="color: white;">Workshop Calendar</h2>
+    <iframe 
+      src="https://calendar.google.com/calendar/embed?src=c2790203aa9fb715a9218b5bf419b97116464fe5d2f8a89bebad55801f3428b0%40group.calendar.google.com&ctz=Europe%2FLondon&mode=WEEK&showTitle=0&showPrint=0&showTabs=0&showCalendars=0&showTz=0"
+      style="border: 0; width: 100%; height: 1000px;" 
+      frameborder="0" 
+      scrolling="no">
+    </iframe>
+  </div>
 
   <script>
     function updateTime() {
@@ -97,44 +123,45 @@
       document.getElementById('current-time').textContent = time;
     }
 
-    async function fetchICSEvents() {
-      const proxy = "https://cors-anywhere.herokuapp.com/";
-      const icsURL = "https://calendar.google.com/calendar/ical/c2790203aa9fb715a9218b5bf419b97116464fe5d2f8a89bebad55801f3428b0%40group.calendar.google.com/public/basic.ics";
-      const target = document.getElementById("workshop-loading");
+    function fetchData() {
+      const sheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQZ-zJYsX9U5UDA9VPdW8RD_CUer3JTSbfBNVcix2x5u6myQogxI_fCH6OIRU6nffi47ASKYSRPftKT/pub?output=csv';
 
-      try {
-        const response = await fetch(proxy + icsURL);
-        const data = await response.text();
+      fetch(sheetURL)
+        .then(response => response.text())
+        .then(csv => {
+          const rows = csv.trim().split('\n').map(row => row.split(','));
+          const workshop = rows.slice(1, 5).map(r => r[0]).join('<br>');
+          const completed = rows.slice(1, 5).map(r => r[1]).join('<br>');
+          const efficiency = rows[1][2] || 'N/A';
+          const message = rows[0][3] || 'No message.';
+          const vorVehicles = rows[5][3] || 'No VOR data';
 
-        const today = new Date();
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth() + 1).padStart(2, '0');
-        const dd = String(today.getDate()).padStart(2, '0');
-        const todayStr = `${yyyy}${mm}${dd}`;
+          document.getElementById('workshop-loading').innerHTML = `<strong>Todays Workshop Loading</strong><br>${workshop}`;
+          document.getElementById('completed-jobs').innerHTML = `<strong>Completed Jobs</strong><br>${completed}`;
+          document.getElementById('efficiency').innerHTML = `<strong>Workshop Efficiency</strong><br>${efficiency}`;
+          document.getElementById('workshop-message').innerHTML = `<strong>Message to Workshop:</strong><br>${message}`;
+          document.getElementById('vor-box').innerHTML = `<strong>Current VOR Vehicles</strong><br>${vorVehicles}`;
+        })
+        .catch(err => {
+          console.error('Failed to load data:', err);
+        });
+    }
 
-        const events = data
-          .split("BEGIN:VEVENT")
-          .filter(e => e.includes(`DTSTART;VALUE=DATE:${todayStr}`))
-          .map(e => {
-            const match = e.match(/SUMMARY:(.*)/);
-            return match ? match[1].trim() : "No Title";
-          });
-
-        if (events.length > 0) {
-          target.innerHTML = `<strong>Today's Workshop Loading</strong><br>${events.join("<br>")}`;
-        } else {
-          target.innerHTML = `<strong>Today's Workshop Loading</strong><br>No events for today.`;
-        }
-      } catch (error) {
-        console.error("Error loading .ics data:", error);
-        target.innerHTML = `⚠️ Could not load events.`;
+    function flashVORBox() {
+      const box = document.getElementById('vor-box');
+      if (box) {
+        box.classList.add('flash');
+        setTimeout(() => box.classList.remove('flash'), 1000);
       }
     }
 
     updateTime();
-    fetchICSEvents();
-    setInterval(updateTime, 30000);
-    setInterval(fetchICSEvents, 60000);
+    fetchData();
+    setInterval(() => {
+      updateTime();
+      fetchData();
+    }, 30000);
+    setInterval(flashVORBox, 10000);
   </script>
 </body>
 </html>
