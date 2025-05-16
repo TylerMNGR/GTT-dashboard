@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>GTT Online Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/ical.js@1.4.0/build/ical.min.js"></script>
   <style>
     body {
       background-color: #0a2a5c;
@@ -66,14 +67,6 @@
       color: white;
       margin-bottom: 30px;
     }
-    @keyframes flash {
-      0% { background-color: #ff0000; }
-      50% { background-color: #ffff00; color: black; }
-      100% { background-color: #ff0000; }
-    }
-    .flash {
-      animation: flash 1s ease-in-out;
-    }
     .vorbox {
       background-color: #ff0000 !important;
       color: #ffff00 !important;
@@ -96,14 +89,12 @@
     <div class="box lightblue"><a href="https://tylermngr.github.io/GTT/" target="_blank">Load Job Card</a></div>
     <div class="box vorbox" id="vor-box">Current VOR Vehicles</div>
     <div class="box yellow" id="workshop-loading">Loading...</div>
-    <div class="box green" id="completed-jobs">Loading...</div>
-    <div class="box whitebox" id="efficiency">Loading...</div>
+    <div class="box green" id="completed-jobs">Completed jobs shown here</div>
+    <div class="box whitebox" id="efficiency">Workshop efficiency shown here</div>
   </div>
 
-  <!-- Workshop Message -->
-  <div class="footer-box" id="workshop-message">Loading message...</div>
+  <div class="footer-box" id="workshop-message">Message to workshop shown here</div>
 
-  <!-- Google Calendar Embed -->
   <div style="margin-top: 10px; text-align: center;">
     <h2 style="color: white;">Workshop Calendar</h2>
     <iframe 
@@ -123,43 +114,52 @@
       document.getElementById('current-time').textContent = time;
     }
 
-    function fetchData() {
-      const sheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQZ-zJYsX9U5UDA9VPdW8RD_CUer3JTSbfBNVcix2x5u6myQogxI_fCH6OIRU6nffi47ASKYSRPftKT/pub?output=csv';
+    function fetchWorkshopEvents() {
+      const icsURL = "https://calendar.google.com/calendar/ical/c2790203aa9fb715a9218b5bf419b97116464fe5d2f8a89bebad55801f3428b0%40group.calendar.google.com/public/basic.ics";
 
-      fetch(sheetURL)
-        .then(response => response.text())
-        .then(csv => {
-          const rows = csv.trim().split('\n').map(row => row.split(','));
-          const workshop = rows.slice(1, 5).map(r => r[0]).join('<br>');
-          const completed = rows.slice(1, 5).map(r => r[1]).join('<br>');
-          const efficiency = rows[1][2] || 'N/A';
-          const message = rows[0][3] || 'No message.';
-          const vorVehicles = rows[5][3] || 'No VOR data';
+      fetch(icsURL)
+        .then(res => res.text())
+        .then(data => {
+          const jcalData = ICAL.parse(data);
+          const comp = new ICAL.Component(jcalData);
+          const vevents = comp.getAllSubcomponents("vevent").map(e => new ICAL.Event(e));
 
-          document.getElementById('workshop-loading').innerHTML = `<strong>Todays Workshop Loading</strong><br>${workshop}`;
-          document.getElementById('completed-jobs').innerHTML = `<strong>Completed Jobs</strong><br>${completed}`;
-          document.getElementById('efficiency').innerHTML = `<strong>Workshop Efficiency</strong><br>${efficiency}`;
-          document.getElementById('workshop-message').innerHTML = `<strong>Message to Workshop:</strong><br>${message}`;
-          document.getElementById('vor-box').innerHTML = `<strong>Current VOR Vehicles</strong><br>${vorVehicles}`;
+          const today = new Date().toISOString().slice(0, 10); // e.g., 2025-05-16
+
+          const todayEvents = vevents.filter(ev => {
+            const startDate = ev.startDate.toJSDate().toISOString().slice(0, 10);
+            return startDate === today;
+          });
+
+          if (todayEvents.length === 0) {
+            document.getElementById("workshop-loading").innerHTML = "<strong>Today's Workshop Loading</strong><br>No events scheduled.";
+          } else {
+            const eventHTML = todayEvents.map(ev => {
+              const time = ev.startDate.toJSDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              return `${time} - ${ev.summary}`;
+            }).join("<br>");
+            document.getElementById("workshop-loading").innerHTML = `<strong>Today's Workshop Loading</strong><br>${eventHTML}`;
+          }
         })
         .catch(err => {
-          console.error('Failed to load data:', err);
+          console.error("Failed to fetch calendar:", err);
+          document.getElementById("workshop-loading").innerHTML = "<strong>Today's Workshop Loading</strong><br>⚠️ Could not load events.";
         });
     }
 
     function flashVORBox() {
       const box = document.getElementById('vor-box');
       if (box) {
-        box.classList.add('flash');
-        setTimeout(() => box.classList.remove('flash'), 1000);
+        box.style.animation = 'flash 1s ease-in-out';
+        setTimeout(() => box.style.animation = '', 1000);
       }
     }
 
     updateTime();
-    fetchData();
+    fetchWorkshopEvents();
     setInterval(() => {
       updateTime();
-      fetchData();
+      fetchWorkshopEvents();
     }, 30000);
     setInterval(flashVORBox, 10000);
   </script>
