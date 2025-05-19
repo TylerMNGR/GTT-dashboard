@@ -6,79 +6,63 @@
   <title>GTT Dashboard</title>
   <style>
     body {
-      background-color: #0a1744;
+      background-color: #0d1b2a;
       color: white;
-      font-family: sans-serif;
-      padding: 20px;
-    }
-    h1, h2 {
-      text-align: center;
+      font-family: Arial, sans-serif;
     }
     .box {
-      background-color: #142c66;
+      background: #1b263b;
       padding: 20px;
-      margin: 20px auto;
+      margin: 10px;
       border-radius: 10px;
-      max-width: 800px;
+    }
+    .box h2 {
+      color: #ffcc00;
     }
     ul {
-      list-style: none;
-      padding-left: 0;
-    }
-    li {
-      margin-bottom: 10px;
-    }
-    .event-time {
-      font-weight: bold;
-      margin-right: 10px;
+      padding-left: 20px;
     }
   </style>
 </head>
 <body>
-  <h1>GTT Workshop Dashboard</h1>
-
   <div class="box">
-    <h2>Today's Workshop Loading</h2>
-    <ul id="today-events">
-      <li>Loading...</li>
-    </ul>
+    <h2>Today's Workload</h2>
+    <ul id="todaysWorkload"><li>Loading...</li></ul>
   </div>
-
   <div class="box">
     <h2>Tomorrow's Plan</h2>
-    <ul id="tomorrow-events">
-      <li>Loading...</li>
-    </ul>
+    <ul id="tomorrowsPlan"><li>Loading...</li></ul>
   </div>
 
   <script>
-    const apiURL = "https://script.google.com/macros/s/AKfycbyah57XViF66h4Qq3ktWDJaNUK5n0v0v-u7RHNovpmsi0g9fvIm9m7RIMeTeQOAabQgcg/exec";
+    const endpoint = "https://script.google.com/macros/s/AKfycbyah57XViF66h4Qq3ktWDJaNUK5n0v0v-u7RHNovpmsi0g9fvIm9m7RIMeTeQOAabQgcg/exec";
 
-    async function loadEvents(type, elementId) {
-      try {
-        const res = await fetch(`${apiURL}?type=${type}`);
-        const data = await res.json();
-        const ul = document.getElementById(elementId);
-        ul.innerHTML = '';
+    function loadWorkload(type, targetId) {
+      fetch(`${endpoint}?type=${type}`)
+        .then(res => res.json())
+        .then(data => {
+          const container = document.getElementById(targetId);
+          container.innerHTML = '';
 
-        if (!data.events || data.events.length === 0) {
-          ul.innerHTML = '<li>No events</li>';
-          return;
-        }
+          if (!data.events || data.events.length === 0) {
+            container.innerHTML = `<li>No events</li>`;
+            return;
+          }
 
-        data.events.forEach(event => {
-          const li = document.createElement('li');
-          li.innerHTML = `<span class="event-time">${event.time}</span> ${event.title}`;
-          ul.appendChild(li);
+          data.events.forEach(event => {
+            const li = document.createElement('li');
+            li.textContent = `${event.time} – ${event.title}`;
+            container.appendChild(li);
+          });
+        })
+        .catch(err => {
+          document.getElementById(targetId).innerHTML = `<li>Error loading data</li>`;
+          console.error("Error fetching", type, err);
         });
-      } catch (err) {
-        console.error(err);
-        document.getElementById(elementId).innerHTML = '<li>Error loading events</li>';
-      }
     }
 
-    loadEvents('today', 'today-events');
-    loadEvents('tomorrow', 'tomorrow-events');
+    loadWorkload("today", "todaysWorkload");
+    loadWorkload("tomorrow", "tomorrowsPlan");
   </script>
 </body>
 </html>
