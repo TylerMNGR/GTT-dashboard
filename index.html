@@ -95,7 +95,7 @@
     <div class="box purple"><a href="https://vehicleenquiry.service.gov.uk/" target="_blank">VRM Lookup</a></div>
     <div class="box lightblue"><a href="https://tylermngr.github.io/GTT/" target="_blank">Load Job Card</a></div>
     <div class="box vorbox" id="vor-box">Current VOR Vehicles</div>
-    <div class="box yellow" id="workshop-loading">Loading...</div>
+    <div class="box yellow" id="workshop-loading"><strong>Today's Workshop Loading</strong><br>Loading...</div>
     <div class="box green" id="completed-jobs">Loading...</div>
     <div class="box whitebox" id="efficiency">Loading...</div>
   </div>
@@ -134,7 +134,6 @@
           const message = rows[0][3] || 'No message.';
           const vorVehicles = rows[5][3] || 'No VOR data';
 
-          document.getElementById('workshop-loading').innerHTML = `<strong>Todays Workshop Loading</strong><br>${workshop}`;
           document.getElementById('completed-jobs').innerHTML = `<strong>Completed Jobs</strong><br>${completed}`;
           document.getElementById('efficiency').innerHTML = `<strong>Workshop Efficiency</strong><br>${efficiency}`;
           document.getElementById('workshop-message').innerHTML = `<strong>Message to Workshop:</strong><br>${message}`;
@@ -153,12 +152,37 @@
       }
     }
 
+    async function loadTodaysEvents() {
+      const url = 'https://script.google.com/macros/s/AKfycbw32JD1Nk5J_uycDSi0XSoA4NQRDWZ2uFvWpdmPhF2bSHvNNj37jhFso4XbDzM47b_nMA/exec';
+      try {
+        const res = await fetch(url);
+        const events = await res.json();
+
+        const box = document.getElementById('workshop-loading');
+        if (events.length > 0) {
+          box.innerHTML = `<strong>Today's Workshop Loading</strong><br>` +
+            events.map(e => `${e.title}<br><small>${e.startTime} - ${e.endTime}</small>`).join('<br><br>');
+        } else {
+          box.innerHTML = `<strong>Today's Workshop Loading</strong><br>Nothing booked for today.`;
+        }
+      } catch (error) {
+        console.error('Calendar fetch error:', error);
+        document.getElementById('workshop-loading').innerHTML = `<strong>Today's Workshop Loading</strong><br>Error loading calendar data.`;
+      }
+    }
+
+    // Initial load
     updateTime();
     fetchData();
+    loadTodaysEvents();
+
+    // Auto-refresh
     setInterval(() => {
       updateTime();
       fetchData();
+      loadTodaysEvents();
     }, 30000);
+
     setInterval(flashVORBox, 10000);
   </script>
 </body>
