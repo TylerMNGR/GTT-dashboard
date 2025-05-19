@@ -124,16 +124,26 @@
     }
 
     function fetchDashboardData() {
-      const url = 'https://script.google.com/macros/s/AKfycbw32JD1Nk5J_uycDSi0XSoA4NQRDWZ2uFvWpdmPhF2bSHvNNj37jhFso4XbDzM47b_nMA/exec';
-      
-      fetch(url)
-        .then(response => response.json())
-        .then(data => {
-          const todayEvents = data.today || [];
-          const tomorrowEvents = data.tomorrow || [];
-          const message = data.message || 'No message.';
-          const vorVehicles = data.vor || 'No VOR data';
-          const efficiency = data.efficiency || 'N/A';
+      const baseUrl = 'https://script.google.com/macros/s/AKfycbw32JD1Nk5J_uycDSi0XSoA4NQRDWZ2uFvWpdmPhF2bSHvNNj37jhFso4XbDzM47b_nMA/exec';
+
+      // Fetch today's events
+      const fetchToday = fetch(`${baseUrl}?type=today`)
+        .then(res => res.json())
+        .catch(() => ({ events: [] }));
+
+      // Fetch tomorrow's events
+      const fetchTomorrow = fetch(`${baseUrl}?type=tomorrow`)
+        .then(res => res.json())
+        .catch(() => ({ events: [] }));
+
+      // Fetch all data and update UI
+      Promise.all([fetchToday, fetchTomorrow])
+        .then(([todayData, tomorrowData]) => {
+          const todayEvents = todayData.events || [];
+          const tomorrowEvents = tomorrowData.events || [];
+          const message = todayData.message || tomorrowData.message || 'No message.';
+          const vorVehicles = todayData.vor || tomorrowData.vor || 'No VOR data';
+          const efficiency = todayData.efficiency || tomorrowData.efficiency || 'N/A';
 
           const todayText = todayEvents.length 
             ? todayEvents.map(event => `${event.time} - ${event.title}`).join('<br>') 
@@ -150,9 +160,12 @@
           document.getElementById('vor-box').innerHTML = `<strong>Current VOR Vehicles</strong><br>${vorVehicles}`;
         })
         .catch(err => {
-          console.error('Failed to load calendar data:', err);
+          console.error('Error loading dashboard data:', err);
           document.getElementById('workshop-loading').innerHTML = 'Error loading';
           document.getElementById('tomorrows-plan').innerHTML = 'Error loading';
+          document.getElementById('efficiency').innerHTML = 'Error loading';
+          document.getElementById('workshop-message').innerHTML = 'Error loading';
+          document.getElementById('vor-box').innerHTML = 'Error loading';
         });
     }
 
