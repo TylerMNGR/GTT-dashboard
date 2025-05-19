@@ -95,13 +95,15 @@
     <div class="box purple"><a href="https://vehicleenquiry.service.gov.uk/" target="_blank">VRM Lookup</a></div>
     <div class="box lightblue"><a href="https://tylermngr.github.io/GTT/" target="_blank">Load Job Card</a></div>
     <div class="box vorbox" id="vor-box">Current VOR Vehicles</div>
-    <div class="box yellow" id="workshop-loading"><strong>Today's Workshop Loading</strong><br>Loading...</div>
-    <div class="box green" id="completed-jobs"><strong>Tomorrow's Plan</strong><br>Loading...</div>
+    <div class="box yellow" id="workshop-loading">Loading...</div>
+    <div class="box green" id="tomorrows-plan">Loading...</div>
     <div class="box whitebox" id="efficiency">Loading...</div>
   </div>
 
+  <!-- Workshop Message -->
   <div class="footer-box" id="workshop-message">Loading message...</div>
 
+  <!-- Google Calendar Embed -->
   <div style="margin-top: 10px; text-align: center;">
     <h2 style="color: white;">Workshop Calendar</h2>
     <iframe 
@@ -113,8 +115,6 @@
   </div>
 
   <script>
-    const scriptURL = "https://script.google.com/macros/s/AKfycbw32JD1Nk5J_uycDSi0XSoA4NQRDWZ2uFvWpdmPhF2bSHvNNj37jhFso4XbDzM47b_nMA/exec";
-
     function updateTime() {
       const now = new Date();
       const date = now.toLocaleDateString();
@@ -123,31 +123,36 @@
       document.getElementById('current-time').textContent = time;
     }
 
-    function fetchWorkshopData() {
-      fetch(`${scriptURL}?type=today`)
-        .then(res => res.json())
+    function fetchDashboardData() {
+      const url = 'https://script.google.com/macros/s/AKfycbw32JD1Nk5J_uycDSi0XSoA4NQRDWZ2uFvWpdmPhF2bSHvNNj37jhFso4XbDzM47b_nMA/exec';
+      
+      fetch(url)
+        .then(response => response.json())
         .then(data => {
-          const output = data.length > 0 
-            ? data.map(e => `${e.time} - ${e.title} (${e.technician})`).join('<br>') 
-            : 'Nothing booked for today';
-          document.getElementById('workshop-loading').innerHTML = `<strong>Today's Workshop Loading</strong><br>${output}`;
-        })
-        .catch(() => {
-          document.getElementById('workshop-loading').innerHTML = `<strong>Today's Workshop Loading</strong><br>Error loading`;
-        });
-    }
+          const todayEvents = data.today || [];
+          const tomorrowEvents = data.tomorrow || [];
+          const message = data.message || 'No message.';
+          const vorVehicles = data.vor || 'No VOR data';
+          const efficiency = data.efficiency || 'N/A';
 
-    function fetchTomorrowsPlan() {
-      fetch(`${scriptURL}?type=tomorrow`)
-        .then(res => res.json())
-        .then(data => {
-          const output = data.length > 0 
-            ? data.map(e => `${e.time} - ${e.title} (${e.technician})`).join('<br>') 
+          const todayText = todayEvents.length 
+            ? todayEvents.map(event => `${event.time} - ${event.title}`).join('<br>') 
+            : 'Nothing booked for today';
+
+          const tomorrowText = tomorrowEvents.length 
+            ? tomorrowEvents.map(event => `${event.time} - ${event.title}`).join('<br>') 
             : 'Nothing booked for tomorrow';
-          document.getElementById('completed-jobs').innerHTML = `<strong>Tomorrow's Plan</strong><br>${output}`;
+
+          document.getElementById('workshop-loading').innerHTML = `<strong>Today's Workshop Loading</strong><br>${todayText}`;
+          document.getElementById('tomorrows-plan').innerHTML = `<strong>Tomorrow's Plan</strong><br>${tomorrowText}`;
+          document.getElementById('efficiency').innerHTML = `<strong>Workshop Efficiency</strong><br>${efficiency}`;
+          document.getElementById('workshop-message').innerHTML = `<strong>Message to Workshop:</strong><br>${message}`;
+          document.getElementById('vor-box').innerHTML = `<strong>Current VOR Vehicles</strong><br>${vorVehicles}`;
         })
-        .catch(() => {
-          document.getElementById('completed-jobs').innerHTML = `<strong>Tomorrow's Plan</strong><br>Error loading`;
+        .catch(err => {
+          console.error('Failed to load calendar data:', err);
+          document.getElementById('workshop-loading').innerHTML = 'Error loading';
+          document.getElementById('tomorrows-plan').innerHTML = 'Error loading';
         });
     }
 
@@ -160,9 +165,11 @@
     }
 
     updateTime();
-    fetchWorkshopData();
-    fetchTomorrowsPlan();
-    setInterval(updateTime, 30000);
+    fetchDashboardData();
+    setInterval(() => {
+      updateTime();
+      fetchDashboardData();
+    }, 30000);
     setInterval(flashVORBox, 10000);
   </script>
 </body>
