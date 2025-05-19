@@ -1,68 +1,62 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>GTT Dashboard</title>
-  <style>
-    body {
-      background-color: #0d1b2a;
-      color: white;
-      font-family: Arial, sans-serif;
-    }
-    .box {
-      background: #1b263b;
-      padding: 20px;
-      margin: 10px;
-      border-radius: 10px;
-    }
-    .box h2 {
-      color: #ffcc00;
-    }
-    ul {
-      padding-left: 20px;
-    }
-  </style>
-</head>
-<body>
-  <div class="box">
-    <h2>Today's Workload</h2>
-    <ul id="todaysWorkload"><li>Loading...</li></ul>
-  </div>
-  <div class="box">
-    <h2>Tomorrow's Plan</h2>
-    <ul id="tomorrowsPlan"><li>Loading...</li></ul>
-  </div>
+<script>
+  function updateTime() {
+    const now = new Date();
+    const date = now.toLocaleDateString();
+    const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('current-date').textContent = date;
+    document.getElementById('current-time').textContent = time;
+  }
 
-  <script>
-    const endpoint = "https://script.google.com/macros/s/AKfycbyah57XViF66h4Qq3ktWDJaNUK5n0v0v-u7RHNovpmsi0g9fvIm9m7RIMeTeQOAabQgcg/exec";
+  function fetchData() {
+    const sheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQZ-zJYsX9U5UDA9VPdW8RD_CUer3JTSbfBNVcix2x5u6myQogxI_fCH6OIRU6nffi47ASKYSRPftKT/pub?output=csv';
 
-    function loadWorkload(type, targetId) {
-      fetch(`${endpoint}?type=${type}`)
-        .then(res => res.json())
-        .then(data => {
-          const container = document.getElementById(targetId);
-          container.innerHTML = '';
+    fetch(sheetURL)
+      .then(response => response.text())
+      .then(csv => {
+        const rows = csv.trim().split('\n').map(row => row.split(','));
+        const efficiency = rows[1][2] || 'N/A';
+        const message = rows[0][3] || 'No message.';
+        const vorVehicles = rows[5][3] || 'No VOR data';
 
-          if (!data.events || data.events.length === 0) {
-            container.innerHTML = `<li>No events</li>`;
-            return;
-          }
+        document.getElementById('efficiency').innerHTML = `<strong>Workshop Efficiency</strong><br>${efficiency}`;
+        document.getElementById('workshop-message').innerHTML = `<strong>Message to Workshop:</strong><br>${message}`;
+        document.getElementById('vor-box').innerHTML = `<strong>Current VOR Vehicles</strong><br>${vorVehicles}`;
+      })
+      .catch(err => {
+        console.error('Failed to load data:', err);
+      });
+  }
 
-          data.events.forEach(event => {
-            const li = document.createElement('li');
-            li.textContent = `${event.time} – ${event.title}`;
-            container.appendChild(li);
-          });
-        })
-        .catch(err => {
-          document.getElementById(targetId).innerHTML = `<li>Error loading data</li>`;
-          console.error("Error fetching", type, err);
-        });
+  async function fetchCalendarData(type) {
+    const url = `https://script.google.com/macros/s/AKfycbyah57XViF66h4Qq3ktWDJaNUK5n0v0v-u7RHNovpmsi0g9fvIm9m7RIMeTeQOAabQgcg/exec?type=${type}`;
+    const container = document.getElementById(type === 'today' ? 'workshop-loading' : 'completed-jobs');
+    const label = type === 'today' ? "Today's Workshop Loading" : "Tomorrow's Plan";
+
+    container.innerHTML = `<strong>${label}</strong><br>Loading...`;
+
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (!data || data.length === 0) {
+        container.innerHTML = `<strong>${label}</strong><br>No jobs scheduled.`;
+      } else {
+        container.innerHTML = `<strong>${label}</strong><br>` + data.map(ev => `
+          <div class="event">
+            <strong>${ev.summary}</strong><br/>
+            ${new Date(ev.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        `).join("");
+      }
+    } catch (err) {
+      container.innerHTML = `<strong>${label}</strong><br>Error loading data.`;
+      console.error(err);
     }
+  }
 
-    loadWorkload("today", "todaysWorkload");
-    loadWorkload("tomorrow", "tomorrowsPlan");
-  </script>
-</body>
-</html>
+  setInterval(updateTime, 1000);
+  updateTime();
+  fetchData();
+  fetchCalendarData('today');
+  fetchCalendarData('tomorrow');
+</script>
