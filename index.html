@@ -109,11 +109,11 @@
       <strong>Workshop Efficiency</strong>
       <div>N/A</div>
     </div>
-   <div class="info-box" style="grid-column: span 2">
-  <strong>Message to Workshop:</strong>
-  <div>No message.</div>
-  <button onclick="openMessageModal()" style="margin-top:10px; padding:8px 12px; background:#001f73; color:white; border:none; border-radius:5px;">Login</button>
-</div>
+    <div class="info-box" style="grid-column: span 2">
+      <strong>Message to Workshop:</strong>
+      <div>No message.</div>
+      <button onclick="openMessageModal()" style="margin-top:10px; padding:8px 12px; background:#001f73; color:white; border:none; border-radius:5px;">Login</button>
+    </div>
   </div>
 
   <iframe src="https://calendar.google.com/calendar/embed?src=c2790203aa9fb715a9218b5bf419b97116464fe5d2f8a89bebad55801f3428b0%40group.calendar.google.com&ctz=Europe%2FLondon&mode=WEEK&wkst=2&showTabs=0&showCalendars=0&showTz=0&showPrint=0&showDate=0" allowfullscreen></iframe>
@@ -157,46 +157,66 @@
     loadWorkload("today", "todays-jobs");
     loadWorkload("tomorrow", "tomorrows-plan");
   </script>
-<!-- Message Modal -->
-<div id="messageModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:1000;">
-  <div style="background:white; color:black; padding:20px; border-radius:10px; width:90%; max-width:400px;">
-    <h3>Enter Workshop Message</h3>
-    <textarea id="workshopMessageInput" rows="5" style="width:100%;"></textarea>
-    <div style="text-align:right; margin-top:10px;">
-      <button onclick="saveMessage()">Save</button>
-      <button onclick="closeModal()">Cancel</button>
+
+  <!-- Message Modal -->
+  <div id="messageModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:1000;">
+    <div style="background:white; color:black; padding:20px; border-radius:10px; width:90%; max-width:400px;">
+      <h3>Enter Workshop Message</h3>
+      <textarea id="workshopMessageInput" rows="5" style="width:100%;"></textarea>
+      <div style="text-align:right; margin-top:10px;">
+        <button onclick="saveMessage()">Save</button>
+        <button onclick="closeModal()">Cancel</button>
+      </div>
     </div>
   </div>
-</div>
 
-<script>
-  // Load saved message on page load
-  document.addEventListener("DOMContentLoaded", () => {
-    const savedMsg = localStorage.getItem("workshopMessage") || "No message.";
-    document.querySelector(".info-box:nth-child(5) div").textContent = savedMsg;
-  });
+  <!-- Message Handling Script -->
+  <script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz3gJUtoPG_0x_x2sWiVSKqkdVI8rnmWHHZjaSRPf0XrpcKN7t7C8z-8FVJ7KEE5h2Y/exec";
 
-  function openMessageModal() {
-    const pin = prompt("Enter PIN:");
-    if (pin === "1984") {
-      document.getElementById("workshopMessageInput").value = localStorage.getItem("workshopMessage") || "";
-      document.getElementById("messageModal").style.display = "flex";
-    } else {
-      alert("Incorrect PIN");
+    async function fetchMessageFromSheet() {
+      try {
+        const res = await fetch(WEB_APP_URL);
+        const text = await res.text();
+        document.querySelector(".info-box:nth-child(5) div").textContent = text || "No message.";
+      } catch (e) {
+        console.error("Error fetching message:", e);
+        document.querySelector(".info-box:nth-child(5) div").textContent = "Failed to load message.";
+      }
     }
-  }
 
-  function closeModal() {
-    document.getElementById("messageModal").style.display = "none";
-  }
+    async function saveMessage() {
+      const msg = document.getElementById("workshopMessageInput").value.trim();
+      if (!msg) return alert("Please enter a message.");
+      try {
+        await fetch(WEB_APP_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: `message=${encodeURIComponent(msg)}`
+        });
+        document.querySelector(".info-box:nth-child(5) div").textContent = msg;
+        closeModal();
+      } catch (e) {
+        alert("Failed to save message.");
+      }
+    }
 
-  function saveMessage() {
-    const msg = document.getElementById("workshopMessageInput").value.trim();
-    localStorage.setItem("workshopMessage", msg || "No message.");
-    document.querySelector(".info-box:nth-child(5) div").textContent = msg || "No message.";
-    closeModal();
-  }
-</script>
+    function openMessageModal() {
+      const pin = prompt("Enter PIN:");
+      if (pin === "1984") {
+        document.getElementById("workshopMessageInput").value = document.querySelector(".info-box:nth-child(5) div").textContent;
+        document.getElementById("messageModal").style.display = "flex";
+      } else {
+        alert("Incorrect PIN");
+      }
+    }
+
+    function closeModal() {
+      document.getElementById("messageModal").style.display = "none";
+    }
+
+    document.addEventListener("DOMContentLoaded", fetchMessageFromSheet);
+  </script>
 
 </body>
 </html>
