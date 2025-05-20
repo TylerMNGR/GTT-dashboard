@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GTT Online Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/ical.js@1.4.0/build/ical.min.js"></script>
   <style>
     body {
       background-color: #001f73;
@@ -16,14 +15,17 @@
       flex-direction: column;
       align-items: center;
     }
+
     .logo {
       height: 60px;
       margin-bottom: 20px;
     }
+
     .datetime {
       font-size: 1.1em;
       margin-bottom: 20px;
     }
+
     .button-row {
       display: flex;
       gap: 20px;
@@ -31,6 +33,7 @@
       flex-wrap: wrap;
       justify-content: center;
     }
+
     .button {
       background-color: orange;
       color: white;
@@ -41,6 +44,7 @@
       min-width: 180px;
       text-align: center;
     }
+
     .info-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -49,6 +53,7 @@
       max-width: 1000px;
       margin-bottom: 30px;
     }
+
     .info-box {
       background-color: yellow;
       color: black;
@@ -57,11 +62,13 @@
       min-height: 160px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
+
     .info-box strong {
       display: block;
       font-size: 1.2em;
       margin-bottom: 10px;
     }
+
     iframe {
       border-radius: 10px;
       width: 100%;
@@ -92,11 +99,11 @@
     </div>
     <div class="info-box">
       <strong>Today's Workshop Loading</strong>
-      <div id="todays-jobs">Loading...</div>
+      <ul id="todays-jobs"><li>Loading...</li></ul>
     </div>
     <div class="info-box">
       <strong>Tomorrow's Plan</strong>
-      <div id="tomorrows-plan">Loading...</div>
+      <ul id="tomorrows-plan"><li>Loading...</li></ul>
     </div>
     <div class="info-box">
       <strong>Workshop Efficiency</strong>
@@ -119,50 +126,35 @@
     setInterval(updateDateTime, 1000);
     updateDateTime();
 
-    async function fetchCalendarEvents() {
-      try {
-        const res = await fetch('https://corsproxy.io/?https://calendar.google.com/calendar/ical/c2790203aa9fb715a9218b5bf419b97116464fe5d2f8a89bebad55801f3428b0%40group.calendar.google.com/public/basic.ics');
-        const text = await res.text();
-        const jcalData = ICAL.parse(text);
-        const comp = new ICAL.Component(jcalData);
-        const vevents = comp.getAllSubcomponents('vevent');
+    // Load events from Google Apps Script
+    const endpoint = "https://script.google.com/macros/s/AKfycbyah57XViF66h4Qq3ktWDJaNUK5n0v0v-u7RHNovpmsi0g9fvIm9m7RIMeTeQOAabQgcg/exec";
 
-        const events = vevents.map(ve => {
-          const event = new ICAL.Event(ve);
-          return {
-            summary: event.summary,
-            date: event.startDate.toJSDate()
-          };
+    function loadWorkload(type, targetId) {
+      fetch(`${endpoint}?type=${type}`)
+        .then(res => res.json())
+        .then(data => {
+          const container = document.getElementById(targetId);
+          container.innerHTML = '';
+
+          if (!data.events || data.events.length === 0) {
+            container.innerHTML = `<li>No events</li>`;
+            return;
+          }
+
+          data.events.forEach(event => {
+            const li = document.createElement('li');
+            li.textContent = `${event.time} – ${event.title}`;
+            container.appendChild(li);
+          });
+        })
+        .catch(err => {
+          document.getElementById(targetId).innerHTML = `<li>Error loading data</li>`;
+          console.error("Error fetching", type, err);
         });
-
-        const today = new Date();
-        const tomorrow = new Date();
-        tomorrow.setDate(today.getDate() + 1);
-
-        const isSameDay = (d1, d2) =>
-          d1.getFullYear() === d2.getFullYear() &&
-          d1.getMonth() === d2.getMonth() &&
-          d1.getDate() === d2.getDate();
-
-        const todaysEvents = events.filter(e => isSameDay(e.date, today));
-        const tomorrowsEvents = events.filter(e => isSameDay(e.date, tomorrow));
-
-        document.getElementById('todays-jobs').innerHTML = todaysEvents.length
-          ? todaysEvents.map(e => `<div>${e.summary}</div>`).join('')
-          : 'Nothing booked for today';
-
-        document.getElementById('tomorrows-plan').innerHTML = tomorrowsEvents.length
-          ? tomorrowsEvents.map(e => `<div>${e.summary}</div>`).join('')
-          : 'Nothing booked for tomorrow';
-
-      } catch (error) {
-        console.error('Error loading calendar events:', error);
-        document.getElementById('todays-jobs').innerHTML = 'Failed to load calendar';
-        document.getElementById('tomorrows-plan').innerHTML = 'Failed to load calendar';
-      }
     }
 
-    fetchCalendarEvents();
+    loadWorkload("today", "todays-jobs");
+    loadWorkload("tomorrow", "tomorrows-plan");
   </script>
 </body>
 </html>
