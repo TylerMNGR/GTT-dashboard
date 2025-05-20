@@ -132,8 +132,8 @@
         const text = await res.text();
         const events = text.split('BEGIN:VEVENT').slice(1).map(block => {
           const summary = block.match(/SUMMARY:(.+)/)?.[1].trim() || '';
-          const dtStartMatch = block.match(/DTSTART(;[^:]*)?:(\d{8})/);
-          const date = dtStartMatch ? dtStartMatch[2] : '';
+          const dtStartMatch = block.match(/DTSTART(?:;[^:]*)?:(\d{8})|DTSTART(?:;[^:]*)?:(\d{8})T/);
+          const date = dtStartMatch ? (dtStartMatch[1] || dtStartMatch[2]) : '';
           return { summary, date };
         });
 
