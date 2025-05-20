@@ -127,20 +127,34 @@
     updateDateTime();
 
     async function fetchCalendarEvents() {
-      const res = await fetch('https://corsproxy.io/?https://calendar.google.com/calendar/ical/c2790203aa9fb715a9218b5bf419b97116464fe5d2f8a89bebad55801f3428b0%40group.calendar.google.com/public/basic.ics');
-      const text = await res.text();
-      const events = text.split('BEGIN:VEVENT').slice(1).map(block => {
-        const summary = block.match(/SUMMARY:(.+)/)?.[1] || '';
-        const dtStart = block.match(/DTSTART.*:(\d+)/)?.[1] || '';
-        const date = dtStart.slice(0, 8);
-        return { summary, date };
-      });
+      try {
+        const res = await fetch('https://corsproxy.io/?https://calendar.google.com/calendar/ical/c2790203aa9fb715a9218b5bf419b97116464fe5d2f8a89bebad55801f3428b0%40group.calendar.google.com/public/basic.ics');
+        const text = await res.text();
+        const events = text.split('BEGIN:VEVENT').slice(1).map(block => {
+          const summary = block.match(/SUMMARY:(.+)/)?.[1].trim() || '';
+          const dtStartMatch = block.match(/DTSTART(;[^:]*)?:(\d{8})/);
+          const date = dtStartMatch ? dtStartMatch[2] : '';
+          return { summary, date };
+        });
 
-      const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10).replace(/-/g, '');
+        const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10).replace(/-/g, '');
 
-      document.getElementById('todays-jobs').innerHTML = events.filter(e => e.date === today).map(e => `<div>${e.summary}</div>`).join('') || 'Nothing booked for today';
-      document.getElementById('tomorrows-plan').innerHTML = events.filter(e => e.date === tomorrow).map(e => `<div>${e.summary}</div>`).join('') || 'Nothing booked for tomorrow';
+        const todaysEvents = events.filter(e => e.date === today);
+        const tomorrowsEvents = events.filter(e => e.date === tomorrow);
+
+        document.getElementById('todays-jobs').innerHTML = todaysEvents.length
+          ? todaysEvents.map(e => `<div>${e.summary}</div>`).join('')
+          : 'Nothing booked for today';
+
+        document.getElementById('tomorrows-plan').innerHTML = tomorrowsEvents.length
+          ? tomorrowsEvents.map(e => `<div>${e.summary}</div>`).join('')
+          : 'Nothing booked for tomorrow';
+      } catch (err) {
+        console.error('Calendar fetch error:', err);
+        document.getElementById('todays-jobs').innerHTML = 'Failed to load calendar';
+        document.getElementById('tomorrows-plan').innerHTML = 'Failed to load calendar';
+      }
     }
 
     fetchCalendarEvents();
