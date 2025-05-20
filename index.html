@@ -130,10 +130,11 @@
       try {
         const res = await fetch('https://corsproxy.io/?https://calendar.google.com/calendar/ical/c2790203aa9fb715a9218b5bf419b97116464fe5d2f8a89bebad55801f3428b0%40group.calendar.google.com/public/basic.ics');
         const text = await res.text();
+
         const events = text.split('BEGIN:VEVENT').slice(1).map(block => {
-          const summary = block.match(/SUMMARY:(.+)/)?.[1].trim() || '';
-          const dtStartMatch = block.match(/DTSTART(?:;[^:]*)?:(\d{8})|DTSTART(?:;[^:]*)?:(\d{8})T/);
-          const date = dtStartMatch ? (dtStartMatch[1] || dtStartMatch[2]) : '';
+          const summary = (block.match(/SUMMARY:(.+)/) || [])[1]?.trim() || '';
+          const dtStartMatch = block.match(/DTSTART.*:(\d{8})(T\d{6})?/);
+          const date = dtStartMatch ? dtStartMatch[1] : '';
           return { summary, date };
         });
 
@@ -150,6 +151,7 @@
         document.getElementById('tomorrows-plan').innerHTML = tomorrowsEvents.length
           ? tomorrowsEvents.map(e => `<div>${e.summary}</div>`).join('')
           : 'Nothing booked for tomorrow';
+
       } catch (err) {
         console.error('Calendar fetch error:', err);
         document.getElementById('todays-jobs').innerHTML = 'Failed to load calendar';
