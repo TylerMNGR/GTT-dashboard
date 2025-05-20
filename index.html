@@ -1,62 +1,132 @@
-<script>
-  function updateTime() {
-    const now = new Date();
-    const date = now.toLocaleDateString();
-    const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    document.getElementById('current-date').textContent = date;
-    document.getElementById('current-time').textContent = time;
-  }
-
-  function fetchData() {
-    const sheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQZ-zJYsX9U5UDA9VPdW8RD_CUer3JTSbfBNVcix2x5u6myQogxI_fCH6OIRU6nffi47ASKYSRPftKT/pub?output=csv';
-
-    fetch(sheetURL)
-      .then(response => response.text())
-      .then(csv => {
-        const rows = csv.trim().split('\n').map(row => row.split(','));
-        const efficiency = rows[1][2] || 'N/A';
-        const message = rows[0][3] || 'No message.';
-        const vorVehicles = rows[5][3] || 'No VOR data';
-
-        document.getElementById('efficiency').innerHTML = `<strong>Workshop Efficiency</strong><br>${efficiency}`;
-        document.getElementById('workshop-message').innerHTML = `<strong>Message to Workshop:</strong><br>${message}`;
-        document.getElementById('vor-box').innerHTML = `<strong>Current VOR Vehicles</strong><br>${vorVehicles}`;
-      })
-      .catch(err => {
-        console.error('Failed to load data:', err);
-      });
-  }
-
-  async function fetchCalendarData(type) {
-    const url = `https://script.google.com/macros/s/AKfycbyah57XViF66h4Qq3ktWDJaNUK5n0v0v-u7RHNovpmsi0g9fvIm9m7RIMeTeQOAabQgcg/exec?type=${type}`;
-    const container = document.getElementById(type === 'today' ? 'workshop-loading' : 'completed-jobs');
-    const label = type === 'today' ? "Today's Workshop Loading" : "Tomorrow's Plan";
-
-    container.innerHTML = `<strong>${label}</strong><br>Loading...`;
-
-    try {
-      const res = await fetch(url);
-      const data = await res.json();
-
-      if (!data || data.length === 0) {
-        container.innerHTML = `<strong>${label}</strong><br>No jobs scheduled.`;
-      } else {
-        container.innerHTML = `<strong>${label}</strong><br>` + data.map(ev => `
-          <div class="event">
-            <strong>${ev.summary}</strong><br/>
-            ${new Date(ev.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </div>
-        `).join("");
-      }
-    } catch (err) {
-      container.innerHTML = `<strong>${label}</strong><br>Error loading data.`;
-      console.error(err);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workshop Dashboard</title>
+  <style>
+    body {
+      background-color: #001f73;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
     }
-  }
+    .header {
+      padding: 10px;
+    }
+    .logo {
+      height: 60px;
+    }
+    .stats-row {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      margin: 10px 0;
+    }
+    .button-row {
+      display: flex;
+      justify-content: space-around;
+      margin: 20px 0;
+    }
+    .button {
+      background-color: orange;
+      color: white;
+      font-weight: bold;
+      padding: 15px 20px;
+      border-radius: 10px;
+      text-decoration: none;
+      width: 180px;
+    }
+    .yellow-boxes {
+      display: flex;
+      justify-content: space-around;
+      margin: 20px;
+    }
+    .box {
+      background-color: yellow;
+      color: black;
+      width: 250px;
+      height: 200px;
+      border-radius: 10px;
+      padding: 10px;
+      overflow-y: auto;
+    }
+    iframe {
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="stats-row">
+      <div>
+        <strong>CURRENT TIME</strong><br />
+        <span id="current-time">--:--</span>
+      </div>
+      <div>
+        <img src="https://tylermngr.github.io/GTT-dashboard/logo.png" alt="Go to town" class="logo" /><br />
+        <strong>YOUR EFFICIENCY</strong> <span>36%</span>
+      </div>
+      <div>
+        <strong>CURRENT DATE</strong><br />
+        <span id="current-date">-- -- ----</span>
+      </div>
+    </div>
 
-  setInterval(updateTime, 1000);
-  updateTime();
-  fetchData();
-  fetchCalendarData('today');
-  fetchCalendarData('tomorrow');
-</script>
+    <div class="button-row">
+      <a class="button" href="https://vehicleenquiry.service.gov.uk/" target="_blank">CHECK MOT & TAX STATUS</a>
+      <a class="button" href="https://tylermngr.github.io/GTT/" target="_blank">LOAD JOB CARD</a>
+      <a class="button" href="mailto:?subject=Workshop Email" onclick="window.location.href='mailto:'">LAUNCH EMAIL</a>
+    </div>
+
+    <div class="yellow-boxes">
+      <div class="box">
+        <strong>TODAYS JOB'S</strong>
+        <div id="todays-jobs"></div>
+      </div>
+      <div class="box">
+        <strong>TOMORROW'S PLAN</strong>
+        <div id="tomorrows-plan"></div>
+      </div>
+      <div class="box">
+        <strong>CURRNT WORKSHOP MESSAGES</strong>
+        <div>—</div>
+      </div>
+    </div>
+
+    <iframe src="https://calendar.google.com/calendar/embed?src=c2790203aa9fb715a9218b5bf419b97116464fe5d2f8a89bebad55801f3428b0%40group.calendar.google.com&ctz=Europe%2FLondon" style="border: 0" width="800" height="600" frameborder="0" scrolling="no"></iframe>
+  </div>
+
+  <script>
+    function updateDateTime() {
+      const now = new Date();
+      document.getElementById('current-time').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('current-date').textContent = now.toLocaleDateString(undefined, { day: '2-digit', month: 'long', year: 'numeric' });
+    }
+    setInterval(updateDateTime, 1000);
+    updateDateTime();
+
+    async function fetchCalendarEvents() {
+      const res = await fetch('https://corsproxy.io/?https://calendar.google.com/calendar/ical/c2790203aa9fb715a9218b5bf419b97116464fe5d2f8a89bebad55801f3428b0%40group.calendar.google.com/public/basic.ics');
+      const text = await res.text();
+      const events = text.split('BEGIN:VEVENT').slice(1).map(block => {
+        const summary = block.match(/SUMMARY:(.+)/)?.[1] || '';
+        const dtStart = block.match(/DTSTART.*:(\d+)/)?.[1] || '';
+        const date = dtStart.slice(0, 8);
+        return { summary, date };
+      });
+
+      const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10).replace(/-/g, '');
+
+      document.getElementById('todays-jobs').innerHTML = events.filter(e => e.date === today).map(e => `<div>${e.summary}</div>`).join('') || 'No Jobs';
+      document.getElementById('tomorrows-plan').innerHTML = events.filter(e => e.date === tomorrow).map(e => `<div>${e.summary}</div>`).join('') || 'No Jobs';
+    }
+
+    fetchCalendarEvents();
+  </script>
+</body>
+</html>
