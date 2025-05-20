@@ -14,20 +14,24 @@
       padding: 0;
     }
     .header {
-      padding: 10px;
+      padding: 20px 10px;
+      max-width: 1000px;
+      margin: auto;
     }
     .logo {
       height: 60px;
     }
     .stats-row {
       display: flex;
-      justify-content: space-around;
+      justify-content: space-between;
       align-items: center;
-      margin: 10px 0;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
     }
     .button-row {
       display: flex;
-      justify-content: space-around;
+      justify-content: space-between;
+      flex-wrap: wrap;
       margin: 20px 0;
     }
     .button {
@@ -37,25 +41,36 @@
       padding: 15px 20px;
       border-radius: 10px;
       text-decoration: none;
-      width: 180px;
+      width: 30%;
+      margin: 10px 0;
+      min-width: 180px;
     }
     .yellow-boxes {
       display: flex;
-      justify-content: space-around;
-      margin: 20px;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin: 20px 0;
     }
     .box {
       background-color: yellow;
       color: black;
-      width: 250px;
-      height: 200px;
-      border-radius: 10px;
-      padding: 10px;
+      width: 30%;
+      min-width: 250px;
+      height: 250px;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 10px auto;
       overflow-y: auto;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
     }
     iframe {
       border-radius: 10px;
-      margin-bottom: 20px;
+      display: block;
+      margin: 20px auto;
+      width: 90%;
+      max-width: 1000px;
+      height: 600px;
+      border: none;
     }
   </style>
 </head>
@@ -67,7 +82,7 @@
         <span id="current-time">--:--</span>
       </div>
       <div>
-        <img src="https://tylermngr.github.io/GTT-dashboard/logo.png" alt="Go to town" class="logo" /><br />
+        <img src="https://www.gtt-online.co.uk/media/2193/logo.png" alt="Go to town" class="logo" /><br />
         <strong>YOUR EFFICIENCY</strong> <span>36%</span>
       </div>
       <div>
@@ -97,7 +112,7 @@
       </div>
     </div>
 
-    <iframe src="https://calendar.google.com/calendar/embed?src=c2790203aa9fb715a9218b5bf419b97116464fe5d2f8a89bebad55801f3428b0%40group.calendar.google.com&ctz=Europe%2FLondon" style="border: 0" width="800" height="600" frameborder="0" scrolling="no"></iframe>
+    <iframe src="https://calendar.google.com/calendar/embed?src=c2790203aa9fb715a9218b5bf419b97116464fe5d2f8a89bebad55801f3428b0%40group.calendar.google.com&ctz=Europe%2FLondon&mode=WEEK&wkst=2&showTabs=0&showCalendars=0&showTz=0" style="border: 0" frameborder="0" scrolling="no"></iframe>
   </div>
 
   <script>
