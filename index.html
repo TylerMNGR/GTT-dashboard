@@ -186,7 +186,8 @@
     try {
       const res = await fetch(WEB_APP_URL);
       const text = await res.text();
-      document.querySelector(".info-box:nth-child(5) div").textContent = text || "No message.";
+      document.querySelector(".info-box:nth-child(5) div").innerHTML = (text || "No message.").split('\n').map(msg => `<div>${msg}</div>`).join('');
+
     } catch (e) {
       console.error("Error fetching message:", e);
       document.querySelector(".info-box:nth-child(5) div").textContent = "Failed to load message.";
