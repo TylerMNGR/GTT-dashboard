@@ -205,7 +205,9 @@
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: `message=${encodeURIComponent(fullMessage)}`
       });
-      document.querySelector(".info-box:nth-child(5) div").textContent = fullMessage;
+      const messageBox = document.querySelector(".info-box:nth-child(5) div");
+messageBox.innerHTML += `${msg} – Message From ${author}<br>`;
+
       closeModal();
     } catch (e) {
       alert("Failed to save message.");
