@@ -131,25 +131,25 @@
     const endpoint = "https://script.google.com/macros/s/AKfycbyah57XViF66h4Qq3ktWDJaNUK5n0v0v-u7RHNovpmsi0g9fvIm9m7RIMeTeQOAabQgcg/exec";
 
     function loadWorkload(type, targetId) {
-      fetch(${endpoint}?type=${type})
+      fetch(`${endpoint}?type=${type}`)
         .then(res => res.json())
         .then(data => {
           const container = document.getElementById(targetId);
           container.innerHTML = '';
 
           if (!data.events || data.events.length === 0) {
-            container.innerHTML = <li>No events</li>;
+            container.innerHTML = `<li>No events</li>`;
             return;
           }
 
           data.events.forEach(event => {
             const li = document.createElement('li');
-            li.textContent = ${event.time} – ${event.title};
+            li.textContent = `${event.time} – ${event.title}`;
             container.appendChild(li);
           });
         })
         .catch(err => {
-          document.getElementById(targetId).innerHTML = <li>Error loading data</li>;
+          document.getElementById(targetId).innerHTML = `<li>Error loading data</li>`;
           console.error("Error fetching", type, err);
         });
     }
@@ -172,6 +172,7 @@
 
 <script>
   const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz3gJUtoPG_0x_x2sWiVSKqkdVI8rnmWHHZjaSRPf0XrpcKN7t7C8z-8FVJ7KEE5h2Y/exec";
+
   const pinUsers = {
     "0207": "Tyler",
     "0125": "Kris",
@@ -181,109 +182,52 @@
     "3231": "Supervisor"
   };
 
-  let currentUser = null;
-  let currentPIN = null;
-
-  function openMessageModal(existingMessage = "", messageIndex = null) {
-    const pin = prompt("Enter PIN:");
-    if (!pinUsers[pin]) return alert("Incorrect PIN");
-
-    currentUser = pinUsers[pin];
-    currentPIN = pin;
-
-    document.getElementById("workshopMessageInput").value = existingMessage;
-    document.getElementById("messageModal").dataset.index = messageIndex ?? "";
-    document.getElementById("messageModal").style.display = "flex";
-  }
-
-  async function fetchMessages() {
+  async function fetchMessageFromSheet() {
     try {
       const res = await fetch(WEB_APP_URL);
-      const data = await res.json(); // Expecting: [{message, user}]
-      const container = document.getElementById("messageContainer");
-
-      if (!Array.isArray(data) || data.length === 0) {
-        container.innerHTML = "No messages.";
-        return;
-      }
-
-      container.innerHTML = "";
-      data.forEach((entry, index) => {
-        const div = document.createElement("div");
-        div.style.marginBottom = "10px";
-        div.innerHTML = `${entry.message} – Message From ${entry.user}`;
-
-        // Add edit/delete buttons if user matches
-        const lastUser = sessionStorage.getItem("lastUser");
-        if (lastUser === entry.user) {
-          const editBtn = document.createElement("button");
-          editBtn.textContent = "Edit";
-          editBtn.style.marginLeft = "10px";
-          editBtn.onclick = () => openMessageModal(entry.message, index);
-
-          const delBtn = document.createElement("button");
-          delBtn.textContent = "Delete";
-          delBtn.style.marginLeft = "5px";
-          delBtn.onclick = () => deleteMessage(index);
-
-          div.appendChild(editBtn);
-          div.appendChild(delBtn);
-        }
-
-        container.appendChild(div);
-      });
-    } catch (err) {
-      console.error("Error loading messages:", err);
-      document.getElementById("messageContainer").innerHTML = "Failed to load messages.";
+      const text = await res.text();
+      document.querySelector(".info-box:nth-child(5) div").textContent = text || "No message.";
+    } catch (e) {
+      console.error("Error fetching message:", e);
+      document.querySelector(".info-box:nth-child(5) div").textContent = "Failed to load message.";
     }
   }
 
   async function saveMessage() {
     const msg = document.getElementById("workshopMessageInput").value.trim();
+    const author = sessionStorage.getItem("lastUser") || "Unknown";
     if (!msg) return alert("Please enter a message.");
-
-    const index = document.getElementById("messageModal").dataset.index;
-
     try {
-      const payload = {
-        message: msg,
-        user: currentUser,
-        index
-      };
-
+      const fullMessage = `${msg} – Message From ${author}`;
       await fetch(WEB_APP_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `message=${encodeURIComponent(fullMessage)}`
       });
-
-      sessionStorage.setItem("lastUser", currentUser);
+      document.querySelector(".info-box:nth-child(5) div").textContent = fullMessage;
       closeModal();
-      fetchMessages();
     } catch (e) {
       alert("Failed to save message.");
     }
   }
 
-  async function deleteMessage(index) {
-    if (!confirm("Are you sure you want to delete this message?")) return;
-    try {
-      await fetch(WEB_APP_URL + `?delete=${index}`, { method: "POST" });
-      fetchMessages();
-    } catch (err) {
-      alert("Failed to delete message.");
+  function openMessageModal() {
+    const pin = prompt("Enter PIN:");
+    if (pinUsers[pin]) {
+      sessionStorage.setItem("lastUser", pinUsers[pin]);
+      document.getElementById("workshopMessageInput").value = document.querySelector(".info-box:nth-child(5) div").textContent.replace(/ – Message From .+$/, "");
+      document.getElementById("messageModal").style.display = "flex";
+    } else {
+      alert("Incorrect PIN");
     }
   }
 
   function closeModal() {
     document.getElementById("messageModal").style.display = "none";
-    document.getElementById("workshopMessageInput").value = "";
-    document.getElementById("messageModal").dataset.index = "";
   }
 
-  document.addEventListener("DOMContentLoaded", fetchMessages);
+  document.addEventListener("DOMContentLoaded", fetchMessageFromSheet);
 </script>
-
 <script>
   async function loadWorkshopData() {
     const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTJU9LnFOSTf213reiUewPDl8ejg5w2Nyh5EBaN4N5_S6VZ7ERn2hE5cB4-hQOcXc95ZJg1QWqyarVo/pub?output=csv";
@@ -296,14 +240,14 @@
       // Get D2 (Row 2, Col 4 = index 3)
       const efficiency = rows[1][3] || "N/A";
       const efficiencyBox = document.querySelector(".info-box:nth-child(4)");
-      efficiencyBox.innerHTML = <strong>Workshop Efficiency</strong><div style="text-align:center; font-size: 2em; margin-top: 10px;">${efficiency}</div>;
+      efficiencyBox.innerHTML = `<strong>Workshop Efficiency</strong><div style="text-align:center; font-size: 2em; margin-top: 10px;">${efficiency}</div>`;
 
       // Get F2-F6 (Rows 1–5, Col 6 = index 5)
       const vorData = rows.slice(1, 6).map(row => row[5]).filter(Boolean);
       const vorBox = document.querySelector(".info-box:nth-child(1) div");
       vorBox.innerHTML = vorData.length
-        ? vorData.map(item => <div style="color:red;">${item}</div>).join("")
-        : <div>No VOR data</div>;
+        ? vorData.map(item => `<div style="color:red;">${item}</div>`).join("")
+        : `<div>No VOR data</div>`;
     } catch (err) {
       console.error("Error loading workshop data:", err);
     }
