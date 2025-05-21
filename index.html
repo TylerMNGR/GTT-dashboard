@@ -170,53 +170,64 @@
     </div>
   </div>
 
-  <!-- Message Handling Script -->
-  <script>
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz3gJUtoPG_0x_x2sWiVSKqkdVI8rnmWHHZjaSRPf0XrpcKN7t7C8z-8FVJ7KEE5h2Y/exec";
+<script>
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz3gJUtoPG_0x_x2sWiVSKqkdVI8rnmWHHZjaSRPf0XrpcKN7t7C8z-8FVJ7KEE5h2Y/exec";
 
-    async function fetchMessageFromSheet() {
-      try {
-        const res = await fetch(WEB_APP_URL);
-        const text = await res.text();
-        document.querySelector(".info-box:nth-child(5) div").textContent = text || "No message.";
-      } catch (e) {
-        console.error("Error fetching message:", e);
-        document.querySelector(".info-box:nth-child(5) div").textContent = "Failed to load message.";
-      }
+  const pinUsers = {
+    "0207": "Tyler",
+    "0125": "Kris",
+    "0007": "Ness",
+    "5151": "Kirsty",
+    "5050": "Natasha",
+    "3231": "Supervisor"
+  };
+
+  async function fetchMessageFromSheet() {
+    try {
+      const res = await fetch(WEB_APP_URL);
+      const text = await res.text();
+      document.querySelector(".info-box:nth-child(5) div").textContent = text || "No message.";
+    } catch (e) {
+      console.error("Error fetching message:", e);
+      document.querySelector(".info-box:nth-child(5) div").textContent = "Failed to load message.";
     }
+  }
 
-    async function saveMessage() {
-      const msg = document.getElementById("workshopMessageInput").value.trim();
-      if (!msg) return alert("Please enter a message.");
-      try {
-        await fetch(WEB_APP_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: `message=${encodeURIComponent(msg)}`
-        });
-        document.querySelector(".info-box:nth-child(5) div").textContent = msg;
-        closeModal();
-      } catch (e) {
-        alert("Failed to save message.");
-      }
+  async function saveMessage() {
+    const msg = document.getElementById("workshopMessageInput").value.trim();
+    const author = sessionStorage.getItem("lastUser") || "Unknown";
+    if (!msg) return alert("Please enter a message.");
+    try {
+      const fullMessage = `${msg} – Message From ${author}`;
+      await fetch(WEB_APP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `message=${encodeURIComponent(fullMessage)}`
+      });
+      document.querySelector(".info-box:nth-child(5) div").textContent = fullMessage;
+      closeModal();
+    } catch (e) {
+      alert("Failed to save message.");
     }
+  }
 
-    function openMessageModal() {
-      const pin = prompt("Enter PIN:");
-      if (pin === "0207") {
-        document.getElementById("workshopMessageInput").value = document.querySelector(".info-box:nth-child(5) div").textContent;
-        document.getElementById("messageModal").style.display = "flex";
-      } else {
-        alert("Incorrect PIN");
-      }
+  function openMessageModal() {
+    const pin = prompt("Enter PIN:");
+    if (pinUsers[pin]) {
+      sessionStorage.setItem("lastUser", pinUsers[pin]);
+      document.getElementById("workshopMessageInput").value = document.querySelector(".info-box:nth-child(5) div").textContent.replace(/ – Message From .+$/, "");
+      document.getElementById("messageModal").style.display = "flex";
+    } else {
+      alert("Incorrect PIN");
     }
+  }
 
-    function closeModal() {
-      document.getElementById("messageModal").style.display = "none";
-    }
+  function closeModal() {
+    document.getElementById("messageModal").style.display = "none";
+  }
 
-    document.addEventListener("DOMContentLoaded", fetchMessageFromSheet);
-  </script>
+  document.addEventListener("DOMContentLoaded", fetchMessageFromSheet);
+</script>
 
 </body>
 </html>
