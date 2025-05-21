@@ -228,6 +228,36 @@
 
   document.addEventListener("DOMContentLoaded", fetchMessageFromSheet);
 </script>
+<script>
+  async function loadWorkshopData() {
+    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTJU9LnFOSTf213reiUewPDl8ejg5w2Nyh5EBaN4N5_S6VZ7ERn2hE5cB4-hQOcXc95ZJg1QWqyarVo/pub?output=csv";
+
+    try {
+      const response = await fetch(csvUrl);
+      const text = await response.text();
+      const rows = text.trim().split('\n').map(r => r.split(','));
+
+      // Get D2 (Row 2, Col 4 = index 3)
+      const efficiency = rows[1][3] || "N/A";
+      const efficiencyBox = document.querySelector(".info-box:nth-child(4)");
+      efficiencyBox.innerHTML = `<strong>Workshop Efficiency</strong><div style="text-align:center; font-size: 2em; margin-top: 10px;">${efficiency}</div>`;
+
+      // Get F2-F6 (Rows 1–5, Col 6 = index 5)
+      const vorData = rows.slice(1, 6).map(row => row[5]).filter(Boolean);
+      const vorBox = document.querySelector(".info-box:nth-child(1) div");
+      vorBox.innerHTML = vorData.length
+        ? vorData.map(item => `<div style="color:red;">${item}</div>`).join("")
+        : `<div>No VOR data</div>`;
+    } catch (err) {
+      console.error("Error loading workshop data:", err);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    loadWorkshopData();                  // Initial load
+    setInterval(loadWorkshopData, 1800000); // Refresh every 30 minutes
+  });
+</script>
 
 </body>
 </html>
